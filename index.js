@@ -625,10 +625,11 @@ async function ravendQuery() {
     }
     const issue_names = new Set(['new_asset', 'reissue_asset']);
 
-    exit(0);
     try {
         while(true) {
             const node_height = await query('getblockcount', []);
+            console.log(node_height);
+            exit();
             if(currentHeight < node_height - 200) { //Buffer for reorgs
                 currentHeight += 1;
                 const block_hash_to_parse = await query('getblockhash', [currentHeight]);
