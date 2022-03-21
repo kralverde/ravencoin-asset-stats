@@ -756,7 +756,11 @@ async function ravendQuery() {
     
 }
 
-Promise.race([
-    ravendQuery(),
-    app.listen(port),
+
+Promise.all([
+    ravendQuery().catch((e) => {
+        console.log(e);
+        exit();
+    }),
+    app.listen(port)
 ]);
