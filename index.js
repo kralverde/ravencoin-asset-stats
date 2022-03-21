@@ -576,7 +576,7 @@ async function ravendQuery() {
                 data: JSON.stringify(dataString),
                 headers: {'Content-Type': 'application/json'}
             });
-        let json_resp 
+        let json_resp;
         try {
             json_resp = JSON.parse(res.data.toString('utf8'));
         } catch (e) {
