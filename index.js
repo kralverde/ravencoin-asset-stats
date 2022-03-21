@@ -627,6 +627,7 @@ async function ravendQuery() {
 
     try {
         while(true) {
+            console.log("before");
             const node_height = await query('getblockcount', []);
             console.log(node_height);
             exit();
@@ -775,4 +776,5 @@ Promise.all([
     }),
 ]);
 */
+console.log("test");
 ravendQuery();
