@@ -576,7 +576,13 @@ async function ravendQuery() {
                 data: JSON.stringify(dataString),
                 headers: {'Content-Type': 'application/json'}
             });
-        const json_resp = JSON.parse(res.data.toString('utf8'));
+        let json_resp 
+        try {
+            json_resp = JSON.parse(res.data.toString('utf8'));
+        } catch (e) {
+            console.log(res.data);
+            exit(1);
+        }
         if (json_resp.error) {
             throw res.data.error;
         }
@@ -760,7 +766,7 @@ async function ravendQuery() {
 Promise.all([
     ravendQuery().catch((e) => {
         console.log(e);
-        exit();
+        exit(1);
     }),
     app.listen(port)
 ]);
