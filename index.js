@@ -580,7 +580,7 @@ async function ravendQuery() {
         try {
             json_resp = JSON.parse(res.data.toString('utf8'));
         } catch (e) {
-            console.log(res.data);
+            console.log(res.data.toString('utf8'));
             exit(1);
         }
         if (json_resp.error) {
