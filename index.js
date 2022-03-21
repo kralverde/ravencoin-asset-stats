@@ -576,6 +576,9 @@ async function ravendQuery() {
                 data: JSON.stringify(dataString),
                 headers: {'Content-Type': 'application/json'}
             });
+        if (res.status != 200) {
+            throw res.statusMessage;
+        }
         let json_resp;
         try {
             json_resp = JSON.parse(res.data.toString('utf8'));
@@ -625,156 +628,147 @@ async function ravendQuery() {
     }
     const issue_names = new Set(['new_asset', 'reissue_asset']);
 
-    try {
-        while(true) {
-            console.log("before");
-            const node_height = await query('getblockcount', []);
-            console.log(node_height);
-            exit();
-            if(currentHeight < node_height - 200) { //Buffer for reorgs
-                currentHeight += 1;
-                const block_hash_to_parse = await query('getblockhash', [currentHeight]);
-                const block_to_parse = await query('getblock', [block_hash_to_parse]);
+    while(true) {
+        const node_height = await query('getblockcount', []);
+        if(currentHeight < node_height - 200) { //Buffer for reorgs
+            currentHeight += 1;
+            const block_hash_to_parse = await query('getblockhash', [currentHeight]);
+            const block_to_parse = await query('getblock', [block_hash_to_parse]);
 
-                const tsBytes = Buffer.alloc(8);
-                tsBytes.writeBigUint64BE(BigInt(block_to_parse.time));
-                fs.appendFileSync(tsFile, tsBytes);
-                
-                for (const tx_hash of block_to_parse.tx) {
-                    const tx = await query('getrawtransaction', [tx_hash, 1]);
-                    let sats_in = 0;
-                    let sats_out = 0;
-                    let asset_map = {}; //asset to {tot_bytes, asset volume, number of transactions, number of vouts, (re)issuances, transfers}
-                    for (const vout of tx.vout) {
-                        sats_out += vout.valueSat;
-                        if('asset' in vout.scriptPubKey) {
-                            const asset_name = vout.scriptPubKey.asset.name;
-                            const asset_amount = Math.round(vout.scriptPubKey.asset.amount * 100000000);
-                            const asset_type = vout.scriptPubKey.type;
-                            const size = vout.scriptPubKey.hex.length / 2;
-                            
-                            if (asset_name in asset_map) {
-                                asset_map[asset_name].byte_amt += size;
-                                asset_map[asset_name].volume += asset_amount;
-                                asset_map[asset_name].vouts += 1;
-                                asset_map[asset_name].reissuances += issue_names.has(asset_type) ? 1 : 0;
-                                asset_map[asset_name].transfers += asset_type == 'transfer_asset' ? 1 : 0;
-                            } else {
-                                asset_map[asset_name] = {
-                                    byte_amt:size,
-                                    volume:asset_amount, 
-                                    vouts:1,
-                                    reissuances: issue_names.has(asset_type) ? 1 : 0,
-                                    transfers: asset_type == 'transfer_asset' ? 1 : 0};
-                            }
-                        }
-                    }
-                    const assets = Object.keys(asset_map);
-                    if (assets.length > 0) {
-                        for (const vin of tx.vin) {
-                            const vin_tx = await query('getrawtransaction', [vin.txid, 1]);
-                            sats_in += vin_tx.vout[vin.vout].valueSat;
-                        }
-                        fee_scalar = (sats_in - sats_out) / tx.size;
-                        for (const asset of assets) {
-                            const scaled_fee_sats = Math.ceil(asset_map[asset].byte_amt * fee_scalar);
-                            //asset to {fee, asset volume, number of transactions, number of vouts, (re)issuances, transfers}
-                            const assetDir = path.join(mainDir, asset);
-                            const dataDir = path.join(assetDir, 'a_spacer_that_is_greater_than_32');
-                            if (!fs.existsSync(assetDir)) {
-                                fs.mkdirSync(assetDir);
-                                fs.mkdirSync(dataDir);
-                            }
-                            
-                            // Write height
-                            const feeHeightFile = path.join(dataDir, 'height');
-                            const elements = await checkHeightFile(feeHeightFile, currentHeight);
-                            const heightBytes = Buffer.alloc(4); // Max 16777216 for height
-                            heightBytes.writeUInt32BE(currentHeight);
-                            fs.appendFileSync(feeHeightFile, heightBytes);
-                            
-                            // Write fees
-                            let old_fees = BigInt(0);
-                            const feeFile = path.join(dataDir, 'fees');
-                            if (fs.existsSync(feeFile)) {
-                                await cutLastNBytesFromOffset(feeFile, elements*8);
-                                const old_fee_bytes = await readLastNBytes(feeFile, 8).catch((e) => Buffer.alloc(8));
-                                old_fees = old_fee_bytes.readBigUInt64BE();
-                            }
-                            const feeBytes = Buffer.alloc(8); // Max 1.844674407×10E19 fee sats
-                            feeBytes.writeBigUint64BE(old_fees + BigInt(scaled_fee_sats));
-                            fs.appendFileSync(feeFile, feeBytes);
-
-                            // Write Volume
-                            const volumeFile = path.join(dataDir, 'volume');
-                            let old_volume = BigInt(0);
-                            if (fs.existsSync(volumeFile)) {
-                                await cutLastNBytesFromOffset(volumeFile, elements*16);
-                                const old_volume_bytes = await readLastNBytes(volumeFile, 16).catch((e) => Buffer.alloc(16));
-                                old_volume = BigIntBuffer.toBigIntBE(old_volume_bytes);
-                            }
-                            const volumeBytes = BigIntBuffer.toBufferBE(old_volume + BigInt(asset_map[asset].volume), 16)
-                            fs.appendFileSync(volumeFile, volumeBytes);
-
-                            // Write vouts
-                            const voutFile = path.join(dataDir, 'vouts');
-                            let old_vouts = BigInt(0);
-                            if (fs.existsSync(voutFile)) {
-                                await cutLastNBytesFromOffset(voutFile, elements*8);
-                                const old_vouts_bytes = await readLastNBytes(voutFile, 8).catch((e) => Buffer.alloc(8));
-                                old_vouts = old_vouts_bytes.readBigUInt64BE();
-                            }
-                            const voutBytes = Buffer.alloc(8);
-                            voutBytes.writeBigUint64BE(old_vouts + BigInt(asset_map[asset].vouts));
-                            fs.appendFileSync(voutFile, voutBytes);
-
-                            // Write reissuances
-                            const reissueFile = path.join(dataDir, 'reissues');
-                            let old_reissues = BigInt(0);
-                            if (fs.existsSync(reissueFile)) {
-                                await cutLastNBytesFromOffset(reissueFile, elements*8);
-                                const old_reissues_bytes = await readLastNBytes(reissueFile, 8).catch((e) => Buffer.alloc(8));
-                                old_reissues = old_reissues_bytes.readBigUInt64BE();
-                            }
-                            const reissueBytes = Buffer.alloc(8);
-                            reissueBytes.writeBigUint64BE(old_reissues + BigInt(asset_map[asset].reissuances));
-                            fs.appendFileSync(reissueFile, reissueBytes);
-
-                            // Write transfers
-                            const transferFile = path.join(dataDir, 'transfers');
-                            let old_transfers = BigInt(0);
-                            if (fs.existsSync(transferFile)) {
-                                await cutLastNBytesFromOffset(transferFile, elements*8);
-                                const old_transfers_bytes = await readLastNBytes(transferFile, 8).catch((e) => Buffer.alloc(8));
-                                old_transfers = old_transfers_bytes.readBigUInt64BE();
-                            }
-                            const transferBytes = Buffer.alloc(8);
-                            transferBytes.writeBigUint64BE(old_transfers + BigInt(asset_map[asset].transfers));
-                            fs.appendFileSync(transferFile, transferBytes);
+            const tsBytes = Buffer.alloc(8);
+            tsBytes.writeBigUint64BE(BigInt(block_to_parse.time));
+            fs.appendFileSync(tsFile, tsBytes);
+            
+            for (const tx_hash of block_to_parse.tx) {
+                const tx = await query('getrawtransaction', [tx_hash, 1]);
+                let sats_in = 0;
+                let sats_out = 0;
+                let asset_map = {}; //asset to {tot_bytes, asset volume, number of transactions, number of vouts, (re)issuances, transfers}
+                for (const vout of tx.vout) {
+                    sats_out += vout.valueSat;
+                    if('asset' in vout.scriptPubKey) {
+                        const asset_name = vout.scriptPubKey.asset.name;
+                        const asset_amount = Math.round(vout.scriptPubKey.asset.amount * 100000000);
+                        const asset_type = vout.scriptPubKey.type;
+                        const size = vout.scriptPubKey.hex.length / 2;
+                        
+                        if (asset_name in asset_map) {
+                            asset_map[asset_name].byte_amt += size;
+                            asset_map[asset_name].volume += asset_amount;
+                            asset_map[asset_name].vouts += 1;
+                            asset_map[asset_name].reissuances += issue_names.has(asset_type) ? 1 : 0;
+                            asset_map[asset_name].transfers += asset_type == 'transfer_asset' ? 1 : 0;
+                        } else {
+                            asset_map[asset_name] = {
+                                byte_amt:size,
+                                volume:asset_amount, 
+                                vouts:1,
+                                reissuances: issue_names.has(asset_type) ? 1 : 0,
+                                transfers: asset_type == 'transfer_asset' ? 1 : 0};
                         }
                     }
                 }
-                fs.writeFileSync(heightFile, currentHeight.toString());
-                if(currentHeight % 1000 == 0) {
-                    console.log('Parsing height ' + currentHeight);
+                const assets = Object.keys(asset_map);
+                if (assets.length > 0) {
+                    for (const vin of tx.vin) {
+                        const vin_tx = await query('getrawtransaction', [vin.txid, 1]);
+                        sats_in += vin_tx.vout[vin.vout].valueSat;
+                    }
+                    fee_scalar = (sats_in - sats_out) / tx.size;
+                    for (const asset of assets) {
+                        const scaled_fee_sats = Math.ceil(asset_map[asset].byte_amt * fee_scalar);
+                        //asset to {fee, asset volume, number of transactions, number of vouts, (re)issuances, transfers}
+                        const assetDir = path.join(mainDir, asset);
+                        const dataDir = path.join(assetDir, 'a_spacer_that_is_greater_than_32');
+                        if (!fs.existsSync(assetDir)) {
+                            fs.mkdirSync(assetDir);
+                            fs.mkdirSync(dataDir);
+                        }
+                        
+                        // Write height
+                        const feeHeightFile = path.join(dataDir, 'height');
+                        const elements = await checkHeightFile(feeHeightFile, currentHeight);
+                        const heightBytes = Buffer.alloc(4); // Max 16777216 for height
+                        heightBytes.writeUInt32BE(currentHeight);
+                        fs.appendFileSync(feeHeightFile, heightBytes);
+                        
+                        // Write fees
+                        let old_fees = BigInt(0);
+                        const feeFile = path.join(dataDir, 'fees');
+                        if (fs.existsSync(feeFile)) {
+                            await cutLastNBytesFromOffset(feeFile, elements*8);
+                            const old_fee_bytes = await readLastNBytes(feeFile, 8).catch((e) => Buffer.alloc(8));
+                            old_fees = old_fee_bytes.readBigUInt64BE();
+                        }
+                        const feeBytes = Buffer.alloc(8); // Max 1.844674407×10E19 fee sats
+                        feeBytes.writeBigUint64BE(old_fees + BigInt(scaled_fee_sats));
+                        fs.appendFileSync(feeFile, feeBytes);
+
+                        // Write Volume
+                        const volumeFile = path.join(dataDir, 'volume');
+                        let old_volume = BigInt(0);
+                        if (fs.existsSync(volumeFile)) {
+                            await cutLastNBytesFromOffset(volumeFile, elements*16);
+                            const old_volume_bytes = await readLastNBytes(volumeFile, 16).catch((e) => Buffer.alloc(16));
+                            old_volume = BigIntBuffer.toBigIntBE(old_volume_bytes);
+                        }
+                        const volumeBytes = BigIntBuffer.toBufferBE(old_volume + BigInt(asset_map[asset].volume), 16)
+                        fs.appendFileSync(volumeFile, volumeBytes);
+
+                        // Write vouts
+                        const voutFile = path.join(dataDir, 'vouts');
+                        let old_vouts = BigInt(0);
+                        if (fs.existsSync(voutFile)) {
+                            await cutLastNBytesFromOffset(voutFile, elements*8);
+                            const old_vouts_bytes = await readLastNBytes(voutFile, 8).catch((e) => Buffer.alloc(8));
+                            old_vouts = old_vouts_bytes.readBigUInt64BE();
+                        }
+                        const voutBytes = Buffer.alloc(8);
+                        voutBytes.writeBigUint64BE(old_vouts + BigInt(asset_map[asset].vouts));
+                        fs.appendFileSync(voutFile, voutBytes);
+
+                        // Write reissuances
+                        const reissueFile = path.join(dataDir, 'reissues');
+                        let old_reissues = BigInt(0);
+                        if (fs.existsSync(reissueFile)) {
+                            await cutLastNBytesFromOffset(reissueFile, elements*8);
+                            const old_reissues_bytes = await readLastNBytes(reissueFile, 8).catch((e) => Buffer.alloc(8));
+                            old_reissues = old_reissues_bytes.readBigUInt64BE();
+                        }
+                        const reissueBytes = Buffer.alloc(8);
+                        reissueBytes.writeBigUint64BE(old_reissues + BigInt(asset_map[asset].reissuances));
+                        fs.appendFileSync(reissueFile, reissueBytes);
+
+                        // Write transfers
+                        const transferFile = path.join(dataDir, 'transfers');
+                        let old_transfers = BigInt(0);
+                        if (fs.existsSync(transferFile)) {
+                            await cutLastNBytesFromOffset(transferFile, elements*8);
+                            const old_transfers_bytes = await readLastNBytes(transferFile, 8).catch((e) => Buffer.alloc(8));
+                            old_transfers = old_transfers_bytes.readBigUInt64BE();
+                        }
+                        const transferBytes = Buffer.alloc(8);
+                        transferBytes.writeBigUint64BE(old_transfers + BigInt(asset_map[asset].transfers));
+                        fs.appendFileSync(transferFile, transferBytes);
+                    }
                 }
-            } else {
-                await new Promise(resolve => setTimeout(resolve, 60000)); //Wait a minute
             }
+            fs.writeFileSync(heightFile, currentHeight.toString());
+            if(currentHeight % 1000 == 0) {
+                console.log('Parsing height ' + currentHeight);
+            }
+        } else {
+            await new Promise(resolve => setTimeout(resolve, 60000)); //Wait a minute
         }
-    } catch (e) {
-        console.log(e);
-        exit(1);
     }
+    
 }
 
 /*
-Promise.all([
-    ravendQuery().catch((e) => {
-        console.log(e);
-        exit(1);
-    }),
+Promise.race([
+    ravendQuery(),
+    app.listen(port)
 ]);
 */
-console.log("test");
+
 ravendQuery();
