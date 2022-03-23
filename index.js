@@ -585,6 +585,8 @@ async function ravendQuery() {
                 if (typeof value === 'number' && !Number.isSafeInteger(value)) {
                     let strBig = jsonStr.match(new RegExp(`(?:"${key}":)(.*?)(?:,)`))[1] // get the original value using regex expression 
                     return strBig //should be BigInt(strBig) - BigInt function is not working in this snippet
+                } else {
+                    return value
                 }
             });
         } catch (e) {
