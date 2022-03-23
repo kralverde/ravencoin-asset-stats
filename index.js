@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const urllib = require('urllib');
 const BigIntBuffer = require('bigint-buffer');
+const JSONbig = require('json-bigint');
 const { JSONRPCServer } = require("json-rpc-2.0");
 const { exit } = require("process");
 
@@ -581,16 +582,10 @@ async function ravendQuery() {
         }
         let json_resp;
         try {
-            let jsonStr = res.data.toString('utf8')
-            json_resp = JSON.parse(jsonStr, (key, value) => {
-                if (typeof value === 'number' && !Number.isSafeInteger(value)) {
-                    let strBig = jsonStr.match(new RegExp(`(?:"${key}":)(.*?)(?:,)`))[1] // get the original value using regex expression 
-                    return strBig //should be BigInt(strBig) - BigInt function is not working in this snippet
-                } else {
-                    return value
-                }
-            });
+            let jsonStr = res.data.toString('utf8');
+            json_resp = JSONbig.parse(jsonStr);
         } catch (e) {
+            console.log(e)
             throw res.data.toString('utf8');
         }
         if (json_resp.error) {
@@ -637,8 +632,8 @@ async function ravendQuery() {
     const issue_names = new Set(['new_asset', 'reissue_asset']);
 
     while(true) {
-        const node_height = await query('getblockcount', []);
-        if(currentHeight < node_height - 200) { //Buffer for reorgs
+        const node_height = BigInt(await query('getblockcount', []));
+        if(currentHeight < node_height - BigInt(200)) { //Buffer for reorgs
             currentHeight += 1;
             const block_hash_to_parse = await query('getblockhash', [currentHeight]);
             const block_to_parse = await query('getblock', [block_hash_to_parse]);
@@ -682,7 +677,7 @@ async function ravendQuery() {
                         const vin_tx = await query('getrawtransaction', [vin.txid, 1]);
                         sats_in += BigInt(vin_tx.vout[vin.vout].valueSat);
                     }
-                    fee_scalar = parseInt(sats_in - sats_out) / tx.size;
+                    fee_scalar = parseInt(sats_in - sats_out) / parseInt(tx.size);
                     for (const asset of assets) {
                         const scaled_fee_sats = Math.ceil(asset_map[asset].byte_amt * fee_scalar);
                         //asset to {fee, asset volume, number of transactions, number of vouts, (re)issuances, transfers}

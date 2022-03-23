@@ -12,6 +12,7 @@
     "bigint-buffer": "^1.1.5",
     "body-parser": "^1.19.2",
     "express": "^4.17.3",
+    "json-bigint": "^1.0.0",
     "json-rpc-2.0": "^1.1.0",
     "minimist": "^1.2.5",
     "urllib": "^2.38.0"
