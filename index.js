@@ -581,7 +581,12 @@ async function ravendQuery() {
         }
         let json_resp;
         try {
-            json_resp = JSON.parse(res.data.toString('utf8'));
+            json_resp = JSON.parse(res.data.toString('utf8'), (key, value) => {
+                if (typeof value === 'number' && !Number.isSafeInteger(value)) {
+                    let strBig = jsonStr.match(new RegExp(`(?:"${key}":)(.*?)(?:,)`))[1] // get the original value using regex expression 
+                    return strBig //should be BigInt(strBig) - BigInt function is not working in this snippet
+                }
+            });
         } catch (e) {
             throw res.data.toString('utf8');
         }
@@ -641,11 +646,11 @@ async function ravendQuery() {
             
             for (const tx_hash of block_to_parse.tx) {
                 const tx = await query('getrawtransaction', [tx_hash, 1]);
-                let sats_in = 0;
-                let sats_out = 0;
+                let sats_in = BigInt(0);
+                let sats_out = BigInt(0);
                 let asset_map = {}; //asset to {tot_bytes, asset volume, number of transactions, number of vouts, (re)issuances, transfers}
                 for (const vout of tx.vout) {
-                    sats_out += vout.valueSat;
+                    sats_out += BigInt(vout.valueSat);
                     if('asset' in vout.scriptPubKey) {
                         const asset_name = vout.scriptPubKey.asset.name;
                         const asset_amount = Math.round(vout.scriptPubKey.asset.amount * 100000000);
@@ -672,9 +677,9 @@ async function ravendQuery() {
                 if (assets.length > 0) {
                     for (const vin of tx.vin) {
                         const vin_tx = await query('getrawtransaction', [vin.txid, 1]);
-                        sats_in += vin_tx.vout[vin.vout].valueSat;
+                        sats_in += BigInt(vin_tx.vout[vin.vout].valueSat);
                     }
-                    fee_scalar = (sats_in - sats_out) / tx.size;
+                    fee_scalar = parseInt(sats_in - sats_out) / tx.size;
                     for (const asset of assets) {
                         const scaled_fee_sats = Math.ceil(asset_map[asset].byte_amt * fee_scalar);
                         //asset to {fee, asset volume, number of transactions, number of vouts, (re)issuances, transfers}
