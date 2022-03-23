@@ -581,7 +581,8 @@ async function ravendQuery() {
         }
         let json_resp;
         try {
-            json_resp = JSON.parse(res.data.toString('utf8'), (key, value) => {
+            let jsonStr = res.data.toString('utf8')
+            json_resp = JSON.parse(jsonStr, (key, value) => {
                 if (typeof value === 'number' && !Number.isSafeInteger(value)) {
                     let strBig = jsonStr.match(new RegExp(`(?:"${key}":)(.*?)(?:,)`))[1] // get the original value using regex expression 
                     return strBig //should be BigInt(strBig) - BigInt function is not working in this snippet
