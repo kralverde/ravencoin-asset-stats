@@ -673,19 +673,14 @@ async function ravendQuery() {
                 }
                 const assets = Object.keys(asset_map);
                 if (assets.length > 0) {
-                    console.log('Main hash:', tx_hash);
-
                     for (const vin of tx.vin) {
                         const vin_tx = await query('getrawtransaction', [vin.txid, 1]);
                         sats_in += BigInt(vin_tx.vout[vin.vout].valueSat);
                         console.log(vin.txid);
                     }
                     fee_scalar = parseInt(sats_in - sats_out) / parseInt(tx.size);
-                    console.log('Sats and size', sats_in, sats_out, tx.size);
-                    console.log('Conversions', sats_in - sats_out, parseInt(sats_in - sats_out), parseInt(tx.size));
                     for (const asset of assets) {
-                        const scaled_fee_sats = Math.ceil(asset_map[asset].byte_amt * fee_scalar);
-                        console.log('Internal', asset_map[asset].byte_amt, fee_scalar, scaled_fee_sats);
+                        const scaled_fee_sats = fee_scalar < 0 ? 0 : Math.ceil(asset_map[asset].byte_amt * fee_scalar);
                         //asset to {fee, asset volume, number of transactions, number of vouts, (re)issuances, transfers}
                         const assetDir = path.join(mainDir, asset);
                         const dataDir = path.join(assetDir, 'a_spacer_that_is_greater_than_32');
