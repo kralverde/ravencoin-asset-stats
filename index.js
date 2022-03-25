@@ -676,7 +676,6 @@ async function ravendQuery() {
                     for (const vin of tx.vin) {
                         const vin_tx = await query('getrawtransaction', [vin.txid, 1]);
                         sats_in += BigInt(vin_tx.vout[vin.vout].valueSat);
-                        console.log(vin.txid);
                     }
                     fee_scalar = parseInt(sats_in - sats_out) / parseInt(tx.size);
                     for (const asset of assets) {
