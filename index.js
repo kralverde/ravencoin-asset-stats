@@ -678,8 +678,9 @@ async function ravendQuery() {
                         sats_in += BigInt(vin_tx.vout[vin.vout].valueSat);
                     }
                     fee_scalar = parseInt(sats_in - sats_out) / parseInt(tx.size);
-                    console.log(sats_in, sats_out, tx.size);
-                    console.log(sats_in - sats_out, parseInt(sats_in - sats_out), parseInt(tx.Size));
+                    console.log(tx_hash);
+                    console.log('Sats and size', sats_in, sats_out, tx.size);
+                    console.log('Conversions', sats_in - sats_out, parseInt(sats_in - sats_out), parseInt(tx.Size));
                     for (const asset of assets) {
                         const scaled_fee_sats = Math.ceil(asset_map[asset].byte_amt * fee_scalar);
                         console.log(asset_map[asset].byte_amt, fee_scalar, scaled_fee_sats);
