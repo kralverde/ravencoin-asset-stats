@@ -578,15 +578,15 @@ async function ravendQuery() {
                 headers: {'Content-Type': 'application/json'}
             });
         if (res.status != 200) {
-            throw "POST status error: " + res.status + " " + res.statusMessage;
+            throw "POST status error from " + dataString + ": " + res.status + " " + res.statusMessage;
         }
         let json_resp;
+        let jsonStr = res.data.toString('utf8');
         try {
-            let jsonStr = res.data.toString('utf8');
             json_resp = JSONbig.parse(jsonStr);
         } catch (e) {
             console.log(e)
-            throw "POST return error: " + res.data.toString('utf8');
+            throw "POST return error from " + jsonStr + ": " + res.data.toString('utf8');
         }
         if (json_resp.error) {
             throw "Json error: " + res.data.error;
