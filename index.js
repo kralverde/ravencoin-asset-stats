@@ -643,7 +643,6 @@ async function ravendQuery() {
             fs.appendFileSync(tsFile, tsBytes);
             
             for (const tx_hash of block_to_parse.tx) {
-                if (tx_hash == null) continue;
                 const tx = await query('getrawtransaction', [tx_hash, 1]);
                 let sats_in = BigInt(0);
                 let sats_out = BigInt(0);
@@ -675,6 +674,7 @@ async function ravendQuery() {
                 const assets = Object.keys(asset_map);
                 if (assets.length > 0) {
                     for (const vin of tx.vin) {
+                        if (vin.txid == null) continue;
                         const vin_tx = await query('getrawtransaction', [vin.txid, 1]);
                         sats_in += BigInt(vin_tx.vout[vin.vout].valueSat);
                     }
