@@ -578,7 +578,7 @@ async function ravendQuery() {
                 headers: {'Content-Type': 'application/json'}
             });
         if (res.status != 200) {
-            throw "POST status error from " + dataString + ": " + res.status + " " + res.statusMessage;
+            throw "POST status error from " + JSON.stringify(dataString) + ": " + res.status + " " + res.statusMessage;
         }
         let json_resp;
         let jsonStr = res.data.toString('utf8');
