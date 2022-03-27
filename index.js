@@ -638,13 +638,12 @@ async function ravendQuery() {
             const block_hash_to_parse = await query('getblockhash', [currentHeight]);
             const block_to_parse = await query('getblock', [block_hash_to_parse]);
 
-            console.log(block_hash_to_parse);
-
             const tsBytes = Buffer.alloc(8);
             tsBytes.writeBigUint64BE(BigInt(block_to_parse.time));
             fs.appendFileSync(tsFile, tsBytes);
             
             for (const tx_hash of block_to_parse.tx) {
+                if (tx_hash == null) continue;
                 const tx = await query('getrawtransaction', [tx_hash, 1]);
                 let sats_in = BigInt(0);
                 let sats_out = BigInt(0);
