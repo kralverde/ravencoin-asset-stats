@@ -39,7 +39,7 @@ async function checkHeightFile(path, currentHeight) {
             cnt++;
             let height_buff = await readLastNBytesFromOffset(path, 4, 4*cnt).catch((e) => {
                 if(e != 'Negative Offset') {
-                    Promise.reject(e);
+                    Promise.reject("checkHeightFile: " + e);
                 }
                 return true;
             });
@@ -67,13 +67,13 @@ async function cutLastNBytesFromOffset(path, n) {
         }
         fs.stat(path, (err, stats) => {
             if (err) {
-                return reject(err);
+                return reject("cut last n1: " + err);
             }
             const offset = stats.size - n;
             
             fs.truncateSync(path, offset, (err) => {
                 if (err) {
-                    return reject(err);
+                    return reject("cut last n2: " + err);
                 }
             });
             return resolve();
@@ -89,7 +89,7 @@ async function readLastNBytesFromOffset(path, n, negative_offset) {
     return new Promise((resolve, reject) => {
         fs.stat(path, (err, stats) => {
             if (err) {
-                return reject(err);
+                return reject('Read last n1: '+err);
             }
             const position = stats.size - negative_offset;
             if (position < 0) {
@@ -97,12 +97,12 @@ async function readLastNBytesFromOffset(path, n, negative_offset) {
             }
             fs.open(path, 'r', function(errOpen, fd) {
                 if (errOpen) {
-                    return reject(errOpen);
+                    return reject('Read last n2' + errOpen);
                 }
                 fs.read(fd, Buffer.alloc(n), 0, n, position, function(errRead, bytesRead, buffer) {
                     fs.closeSync(fd);
                     if (errRead) {
-                        return reject(errRead);
+                        return reject('Read last n3' + errRead);
                     }
                     return resolve(buffer);
                 });
@@ -115,12 +115,12 @@ async function readNBytesFromOffset(path, offset, n) {
     return new Promise((resolve, reject) => {
         fs.open(path, 'r', function(errOpen, fd) {
             if (errOpen) {
-                return reject(errOpen);
+                return reject('read n1: ' + errOpen);
             }
             fs.read(fd, Buffer.alloc(n), 0, n, offset, function(errRead, bytesRead, buffer) {
                 fs.closeSync(fd);
                 if (errRead) {
-                    return reject(errRead);
+                    return reject('read n2: ' + errRead);
                 }
                 return resolve(buffer);
             });
@@ -145,12 +145,12 @@ async function binarySearchClosest(path, chunkSize, n, type, func) {
     return new Promise(async(resolve, reject) => {
         fs.stat(path, (err, stats) => {
             if (err) {
-                return reject(err);
+                return reject('bin search 1: ' + err);
             }
             const file_size = stats.size;
             fs.open(path, 'r', async function(errOpen, fd) {
                 if (errOpen) {
-                    return reject(errOpen);
+                    return reject('bin search 2: ' + errOpen);
                 }
                 const elements = Math.floor(file_size / chunkSize);
                 const left_most_value_buf = await readNBytesFromOffset(path, 0, chunkSize);
@@ -578,7 +578,7 @@ async function ravendQuery() {
                 headers: {'Content-Type': 'application/json'}
             });
         if (res.status != 200) {
-            throw res.statusMessage;
+            throw "POST status error: " + res.status + " " + res.statusMessage;
         }
         let json_resp;
         try {
@@ -586,10 +586,10 @@ async function ravendQuery() {
             json_resp = JSONbig.parse(jsonStr);
         } catch (e) {
             console.log(e)
-            throw res.data.toString('utf8');
+            throw "POST return error: " + res.data.toString('utf8');
         }
         if (json_resp.error) {
-            throw res.data.error;
+            throw "Json error: " + res.data.error;
         }
         return json_resp.result;
     }
