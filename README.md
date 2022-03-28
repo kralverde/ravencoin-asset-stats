@@ -1,4 +1,6 @@
 # ravencoin-asset-stats
+`node index.js --port port_for_api --daemon http://user:pass@localhost:8766 --dir "/path/to/where/you/want/to/store/stuff"`
+
 API can be queried via a GET request made from the designated path, or a JSONRPC 2.0 POST request to the root /
 
 * Current Height
