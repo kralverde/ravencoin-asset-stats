@@ -136,9 +136,9 @@ async function binarySearchClosest(path, chunkSize, n, type, func) {
     const nearest = BigInt(n);
     function getClosest(val1, val2, target) {
         if (target - val1 >= val2 - target) {
-            return val2;
+            return false;
         } else {
-            return val1;
+            return true;
         }
     }
 
@@ -197,7 +197,7 @@ async function binarySearchClosest(path, chunkSize, n, type, func) {
                                 } else if (type == 2) {
                                     return resolve(mid);
                                 }
-                                return resolve(getClosest(mid_sub_value, mid_value, nearest));
+                                return resolve(getClosest(mid_sub_value, mid_value, nearest) ? (mid - 1) : mid);
                             }
                         }
                         j = mid;
@@ -213,7 +213,7 @@ async function binarySearchClosest(path, chunkSize, n, type, func) {
                                 } else if (type == 2) {
                                     return resolve(mid+1);
                                 }
-                                return resolve(getClosest(mid_value, mid_plus_value, nearest));
+                                return resolve(getClosest(mid_value, mid_plus_value, nearest) ? mid : mid + 1);
                             }
                         }
                         i = mid + 1;
