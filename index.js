@@ -370,12 +370,12 @@ async function getStatsForBlockFrame(assetDir, from, to) {
 app.get("/blockframe/*", async (req, res) => {
     let url = req.url;
     let offset = url.lastIndexOf('/');
-    const to = url.substring(offset + 1);
+    const to = parseInt(url.substring(offset + 1));
     url = url.substring(0, offset);
     offset = url.lastIndexOf('/');
-    const from = url.substring(offset + 1);
+    const from = parseInt(url.substring(offset + 1));
     url = url.substring(0, offset);
-    const asset = req.url.replace('/blockframe/', '');
+    const asset = url.replace('/blockframe/', '');
 
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
@@ -397,12 +397,12 @@ server.addMethod("blockframe", async (params) => {
 app.get("/timeframe/*", async (req, res) => {
     let url = req.url;
     let offset = url.lastIndexOf('/');
-    const to = url.substring(offset + 1);
+    const to = parseInt(url.substring(offset + 1));
     url = url.substring(0, offset);
     offset = url.lastIndexOf('/');
-    const from = url.substring(offset + 1);
+    const from = parseInt(url.substring(offset + 1));
     url = url.substring(0, offset);
-    const asset = req.url.replace('/timeframe/', '');
+    const asset = url.replace('/timeframe/', '');
 
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
@@ -429,12 +429,12 @@ server.addMethod("timeframe", async (params) => {
 app.get("/timedelta/*", async (req, res) => {
     let url = req.url;
     let offset = url.lastIndexOf('/');
-    const to = url.substring(offset + 1);
+    const to = parseInt(url.substring(offset + 1));
     url = url.substring(0, offset);
     offset = url.lastIndexOf('/');
-    const from = url.substring(offset + 1);
+    const from = parseInt(url.substring(offset + 1));
     url = url.substring(0, offset);
-    const asset = req.url.replace('/timedelta/', '');
+    const asset = url.replace('/timedelta/', '');
     
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
@@ -477,12 +477,12 @@ server.addMethod("timedelta", async (params) => {
 app.get("/blockdelta/*", async (req, res) => {
     let url = req.url;
     let offset = url.lastIndexOf('/');
-    const to = url.substring(offset + 1);
+    const to = parseInt(url.substring(offset + 1));
     url = url.substring(0, offset);
     offset = url.lastIndexOf('/');
-    const from = url.substring(offset + 1);
+    const from = parseInt(url.substring(offset + 1));
     url = url.substring(0, offset);
-    const asset = req.url.replace('/blockdelta/', '');
+    const asset = url.replace('/blockdelta/', '');
 
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
@@ -521,9 +521,9 @@ server.addMethod("blockdelta", async (params) => {
 app.get("/stats/*", async (req, res) => {
     let url = req.url;
     let offset = url.lastIndexOf('/');
-    const height = url.substring(offset + 1);
+    const height = parseInt(url.substring(offset + 1));
     url = url.substring(0, offset);
-    const asset = req.url.replace('/stats/', '');
+    const asset = url.replace('/stats/', '');
 
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
