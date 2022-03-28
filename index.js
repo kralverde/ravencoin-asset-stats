@@ -280,7 +280,7 @@ app.get("/first_block/*", async (req, res) => {
     const asset = req.url.replace('/first_block/', '');
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
-        return res.end('Asset does not exist');
+        return res.end(`asset ${asset} does not exist`);
     }
     const dataDir = path.join(assetDir, 'a_spacer_that_is_greater_than_32');
     const heightFile = path.join(dataDir, 'height');
@@ -293,7 +293,7 @@ server.addMethod("first_block", async (params) => {
     const asset = params[0];
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
-        throw 'Asset does not exist';
+        throw `asset ${asset} does not exist`;
     }
     const dataDir = path.join(assetDir, 'a_spacer_that_is_greater_than_32');
     const heightFile = path.join(dataDir, 'height');
@@ -305,7 +305,7 @@ app.get("/last_block/*", async (req, res) => {
     const asset = req.url.replace('/last_block/', '');
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
-        return res.end('Asset does not exist');
+        return res.end(`asset ${asset} does not exist`);
     }
     const dataDir = path.join(assetDir, 'a_spacer_that_is_greater_than_32');
     const heightFile = path.join(dataDir, 'height');
@@ -318,7 +318,7 @@ server.addMethod("last_block", async (params) => {
     const asset = params[0];
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
-        throw 'Asset does not exist';
+        throw `asset ${asset} does not exist`;
     }
     const dataDir = path.join(assetDir, 'a_spacer_that_is_greater_than_32');
     const heightFile = path.join(dataDir, 'height');
@@ -379,7 +379,7 @@ app.get("/blockframe/*", async (req, res) => {
 
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
-        return res.end('Asset does not exist');
+        return res.end(`asset ${asset} does not exist`);
     }
     res.end(await getStatsForBlockFrame(assetDir, from, to));
 });
@@ -388,7 +388,7 @@ server.addMethod("blockframe", async (params) => {
     const [asset, from, to] = params;
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
-        throw 'Asset does not exist';
+        throw `asset ${asset} does not exist`;
     }
     const parsed = JSON.parse(await getStatsForBlockFrame(assetDir, from, to));
     return parsed;
@@ -406,7 +406,7 @@ app.get("/timeframe/*", async (req, res) => {
 
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
-        return res.end('Asset does not exist');
+        return res.end(`asset ${asset} does not exist`);
     }
 
     const from_block = await binarySearchClosest(tsFile, 8, from, 0, 'readBigUInt64BE');
@@ -418,7 +418,7 @@ server.addMethod("timeframe", async (params) => {
     const [asset, from, to] = params;
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
-        throw 'Asset does not exist';
+        throw `asset ${asset} does not exist`;
     }
     const from_block = await binarySearchClosest(tsFile, 8, from, 0, 'readBigUInt64BE');
     const to_block = await binarySearchClosest(tsFile, 8, to, 0, 'readBigUInt64BE');
@@ -438,7 +438,7 @@ app.get("/timedelta/*", async (req, res) => {
     
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
-        return res.end('Asset does not exist');
+        return res.end(`asset ${asset} does not exist`);
     }
     const dataDir = path.join(assetDir, 'a_spacer_that_is_greater_than_32');
     const heightFile = path.join(dataDir, 'height');
@@ -458,7 +458,7 @@ server.addMethod("timedelta", async (params) => {
     const [asset, from, to] = params;
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
-        throw 'Asset does not exist';
+        throw `asset ${asset} does not exist`;
     }
     const dataDir = path.join(assetDir, 'a_spacer_that_is_greater_than_32');
     const heightFile = path.join(dataDir, 'height');
@@ -486,7 +486,7 @@ app.get("/blockdelta/*", async (req, res) => {
 
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
-        return res.end('Asset does not exist');
+        return res.end(`asset ${asset} does not exist`);
     }
     const dataDir = path.join(assetDir, 'a_spacer_that_is_greater_than_32');
     const heightFile = path.join(dataDir, 'height');
@@ -504,7 +504,7 @@ server.addMethod("blockdelta", async (params) => {
     const [asset, from, to] = params;
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
-        throw 'Asset does not exist';
+        throw `asset ${asset} does not exist`;
     }
     const dataDir = path.join(assetDir, 'a_spacer_that_is_greater_than_32');
     const heightFile = path.join(dataDir, 'height');
@@ -527,7 +527,7 @@ app.get("/stats/*", async (req, res) => {
 
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
-        return res.end('Asset does not exist');
+        return res.end(`asset ${asset} does not exist`);
     }
     const dataDir = path.join(assetDir, 'a_spacer_that_is_greater_than_32');
     const heightFile = path.join(dataDir, 'height');
@@ -556,7 +556,7 @@ server.addMethod("stats", async (params) => {
     const [asset, height] = params;
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
-        throw 'Asset does not exist';
+        throw `asset ${asset} does not exist`;
     }
     const dataDir = path.join(assetDir, 'a_spacer_that_is_greater_than_32');
     const heightFile = path.join(dataDir, 'height');
