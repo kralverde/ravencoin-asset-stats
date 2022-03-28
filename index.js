@@ -276,8 +276,8 @@ server.addMethod("closest_block", async (params) => {
     return await binarySearchClosest(tsFile, 8, ts, 0, 'readBigUInt64BE');
 });
 
-app.get("/first_block/:asset", async (req, res) => {
-    const asset = req.params.asset;
+app.get("/first_block/*", async (req, res) => {
+    const asset = req.url.replace('/first_block/', '');
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
         return res.end('Asset does not exist');
@@ -301,8 +301,8 @@ server.addMethod("first_block", async (params) => {
     return heightBytes.readUInt32BE();
 })
 
-app.get("/last_block/:asset", async (req, res) => {
-    const asset = req.params.asset;
+app.get("/last_block/*", async (req, res) => {
+    const asset = req.url.replace('/last_block/', '');
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
         return res.end('Asset does not exist');
@@ -367,10 +367,15 @@ async function getStatsForBlockFrame(assetDir, from, to) {
     }
     return ret + '}\n';
 }
-app.get("/blockframe/:asset/:from/:to", async (req, res) => {
-    const asset = req.params.asset;
-    const from = req.params.from;
-    const to = req.params.to;
+app.get("/blockframe/*", async (req, res) => {
+    let url = req.url;
+    let offset = url.lastIndexOf('/');
+    const to = url.substring(offset + 1);
+    url = url.substring(0, offset);
+    offset = url.lastIndexOf('/');
+    const from = url.substring(offset + 1);
+    url = url.substring(0, offset);
+    const asset = req.url.replace('/blockframe/', '');
 
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
@@ -389,10 +394,15 @@ server.addMethod("blockframe", async (params) => {
     return parsed;
 });
 
-app.get("/timeframe/:asset/:from/:to", async (req, res) => {
-    const asset = req.params.asset;
-    const from = req.params.from;
-    const to = req.params.to;
+app.get("/timeframe/*", async (req, res) => {
+    let url = req.url;
+    let offset = url.lastIndexOf('/');
+    const to = url.substring(offset + 1);
+    url = url.substring(0, offset);
+    offset = url.lastIndexOf('/');
+    const from = url.substring(offset + 1);
+    url = url.substring(0, offset);
+    const asset = req.url.replace('/timeframe/', '');
 
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
@@ -416,10 +426,16 @@ server.addMethod("timeframe", async (params) => {
     return parsed;
 });
 
-app.get("/timedelta/:asset/:from/:to", async (req, res) => {
-    const asset = req.params.asset;
-    const from = req.params.from;
-    const to = req.params.to;
+app.get("/timedelta/*", async (req, res) => {
+    let url = req.url;
+    let offset = url.lastIndexOf('/');
+    const to = url.substring(offset + 1);
+    url = url.substring(0, offset);
+    offset = url.lastIndexOf('/');
+    const from = url.substring(offset + 1);
+    url = url.substring(0, offset);
+    const asset = req.url.replace('/timedelta/', '');
+    
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
         return res.end('Asset does not exist');
@@ -458,10 +474,16 @@ server.addMethod("timedelta", async (params) => {
     return parsed;
 });
 
-app.get("/blockdelta/:asset/:from/:to", async (req, res) => {
-    const asset = req.params.asset;
-    const from = req.params.from;
-    const to = req.params.to;
+app.get("/blockdelta/*", async (req, res) => {
+    let url = req.url;
+    let offset = url.lastIndexOf('/');
+    const to = url.substring(offset + 1);
+    url = url.substring(0, offset);
+    offset = url.lastIndexOf('/');
+    const from = url.substring(offset + 1);
+    url = url.substring(0, offset);
+    const asset = req.url.replace('/blockdelta/', '');
+
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
         return res.end('Asset does not exist');
@@ -496,9 +518,13 @@ server.addMethod("blockdelta", async (params) => {
     return parsed;
 });
 
-app.get("/stats/:asset/:height", async (req, res) => {
-    const asset = req.params.asset;
-    const height = req.params.height;
+app.get("/stats/*", async (req, res) => {
+    let url = req.url;
+    let offset = url.lastIndexOf('/');
+    const height = url.substring(offset + 1);
+    url = url.substring(0, offset);
+    const asset = req.url.replace('/stats/', '');
+
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
         return res.end('Asset does not exist');
