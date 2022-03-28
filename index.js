@@ -794,11 +794,11 @@ async function ravendQuery() {
     
 }
 
-/*
-Promise.race([
-    ravendQuery(),
+
+Promise.all([
+    ravendQuery().catch((e) => {
+        console.log(`ravendQuery error: ${e}`);
+        exit(1);
+    }),
     app.listen(port)
 ]);
-*/
-
-ravendQuery();
