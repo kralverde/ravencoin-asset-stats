@@ -375,7 +375,7 @@ async function getStatsForBlockFrame(assetDir, from, to) {
     for (let i = closest_from; i <= closest_to; i++) {
         const [dbHeight, ts, volume, fee, vouts, reissues, transfers] = await getStatsForOffset(dataDir, i);
         //res.end(`\t"${dbHeight}": {"total_volume":"${volume}", "total_relative_fees":${fee}, "total_vouts":${vouts}, "total_reissue_vouts":${reissues}, "total_transfer_vouts":${transfers}}${i == closest_to ? '' : ','}\n`);
-        ret += `\t"${dbHeight}": {"timestamp":"${ts}", "total_volume":"${volume}", "total_relative_fees":${fee}, "total_vouts":${vouts}, "total_reissue_vouts":${reissues}, "total_transfer_vouts":${transfers}}${i == closest_to ? '' : ','}\n`;
+        ret += `\t"${dbHeight}": {"timestamp":"${ts}", "cum_volume":"${volume}", "cum_fees":${fee}, "cum_vouts":${vouts}, "cum_reissues":${reissues}, "cum_transfers":${transfers}}${i == closest_to ? '' : ','}\n`;
     }
     return ret + '}\n';
 }
