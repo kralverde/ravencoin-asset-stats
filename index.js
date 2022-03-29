@@ -246,7 +246,7 @@ app.get("/currentHeight", (req, res) => {
 
 app.get("/timestamp/:height", async (req, res) => {
     const height = req.params.height;
-    if (isNan(height)) {
+    if (isNaN(height)) {
         return res.end(`height ${height} is not an integer`);
     }
     if (height < 1) {
@@ -259,7 +259,7 @@ app.get("/timestamp/:height", async (req, res) => {
 });
 server.addMethod("timestamp", async (params) => {
     const height = params[0];
-    if (isNan(height)) {
+    if (isNaN(height)) {
         throw `height ${height} is not an integer`;
     }
     if (height < 1) {
@@ -273,7 +273,7 @@ server.addMethod("timestamp", async (params) => {
 
 app.get("/closest_block/:timestamp", async (req, res) => {
     const ts = req.params.timestamp;
-    if (isNan(ts)) {
+    if (isNaN(ts)) {
         return res.end(`time ${ts} is not an integer`);
     }
     const closest = await binarySearchClosest(tsFile, 8, ts, 0, 'readBigUInt64BE');
@@ -282,7 +282,7 @@ app.get("/closest_block/:timestamp", async (req, res) => {
 
 server.addMethod("closest_block", async (params) => {
     const ts = params[0];
-    if (isNan(ts)) {
+    if (isNaN(ts)) {
         return `time ${ts} is not an integer`;
     }
     return await binarySearchClosest(tsFile, 8, ts, 0, 'readBigUInt64BE');
@@ -389,10 +389,10 @@ app.get("/blockframe/*", async (req, res) => {
     url = url.substring(0, offset);
     const asset = url.replace('/blockframe/', '');
 
-    if (isNan(from)) {
+    if (isNaN(from)) {
         return res.end(`from block ${from} is not an integer`);
     }
-    if (isNan(to)) {
+    if (isNaN(to)) {
         return res.end(`to block ${to} is not an integer`);
     }
 
@@ -406,10 +406,10 @@ app.get("/blockframe/*", async (req, res) => {
 server.addMethod("blockframe", async (params) => {
     const [asset, from, to] = params;
 
-    if (isNan(from)) {
+    if (isNaN(from)) {
         throw `from block ${from} is not an integer`;
     }
-    if (isNan(to)) {
+    if (isNaN(to)) {
         throw `to block ${to} is not an integer`;
     }
 
@@ -431,10 +431,10 @@ app.get("/timeframe/*", async (req, res) => {
     url = url.substring(0, offset);
     const asset = url.replace('/timeframe/', '');
 
-    if (isNan(from)) {
+    if (isNaN(from)) {
         return res.end(`from time ${from} is not an integer`);
     }
-    if (isNan(to)) {
+    if (isNaN(to)) {
         return res.end(`to time ${to} is not an integer`);
     }
 
@@ -450,10 +450,10 @@ app.get("/timeframe/*", async (req, res) => {
 
 server.addMethod("timeframe", async (params) => {
     const [asset, from, to] = params;
-    if (isNan(from)) {
+    if (isNaN(from)) {
         throw `from time ${from} is not an integer`;
     }
-    if (isNan(to)) {
+    if (isNaN(to)) {
         throw `to time ${to} is not an integer`;
     }
     const assetDir = path.join(mainDir, asset);
@@ -476,10 +476,10 @@ app.get("/timedelta/*", async (req, res) => {
     url = url.substring(0, offset);
     const asset = url.replace('/timedelta/', '');
     
-    if (isNan(from)) {
+    if (isNaN(from)) {
         return res.end(`from time ${from} is not an integer`);
     }
-    if (isNan(to)) {
+    if (isNaN(to)) {
         return res.end(`to time ${to} is not an integer`);
     }
 
@@ -504,10 +504,10 @@ app.get("/timedelta/*", async (req, res) => {
 server.addMethod("timedelta", async (params) => {
     const [asset, from, to] = params;
 
-    if (isNan(from)) {
+    if (isNaN(from)) {
         throw `from time ${from} is not an integer`;
     }
-    if (isNan(to)) {
+    if (isNaN(to)) {
         throw `to time ${to} is not an integer`;
     }
 
@@ -539,10 +539,10 @@ app.get("/blockdelta/*", async (req, res) => {
     url = url.substring(0, offset);
     const asset = url.replace('/blockdelta/', '');
 
-    if (isNan(from)) {
+    if (isNaN(from)) {
         return res.end(`from height ${from} is not an integer`);
     }
-    if (isNan(to)) {
+    if (isNaN(to)) {
         return res.end(`to height ${to} is not an integer`);
     }
 
@@ -565,10 +565,10 @@ app.get("/blockdelta/*", async (req, res) => {
 server.addMethod("blockdelta", async (params) => {
     const [asset, from, to] = params;
 
-    if (isNan(from)) {
+    if (isNaN(from)) {
         throw `from height ${from} is not an integer`;
     }
-    if (isNan(to)) {
+    if (isNaN(to)) {
         throw `to height ${to} is not an integer`;
     }
 
@@ -630,7 +630,7 @@ app.get("/stats/*", async (req, res) => {
 server.addMethod("stats", async (params) => {
     const [asset, height] = params;
 
-    if (isNan(height)) {
+    if (isNaN(height)) {
         throw `height ${height} is not a number`;
     }
 
