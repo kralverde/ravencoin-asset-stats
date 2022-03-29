@@ -246,6 +246,9 @@ app.get("/currentHeight", (req, res) => {
 
 app.get("/timestamp/:height", async (req, res) => {
     const height = req.params.height;
+    if (isNan(height)) {
+        return res.end(`height ${height} is not an integer`);
+    }
     if (height < 1) {
         return res.end('The height cannot be less than 1');
     } else if (height > currentHeight) {
@@ -256,6 +259,9 @@ app.get("/timestamp/:height", async (req, res) => {
 });
 server.addMethod("timestamp", async (params) => {
     const height = params[0];
+    if (isNan(height)) {
+        throw `height ${height} is not an integer`;
+    }
     if (height < 1) {
         throw 'The height cannot be less than 1';
     } else if (height > currentHeight) {
@@ -267,12 +273,18 @@ server.addMethod("timestamp", async (params) => {
 
 app.get("/closest_block/:timestamp", async (req, res) => {
     const ts = req.params.timestamp;
+    if (isNan(ts)) {
+        return res.end(`time ${ts} is not an integer`);
+    }
     const closest = await binarySearchClosest(tsFile, 8, ts, 0, 'readBigUInt64BE');
     res.end(closest.toString());
 });
 
 server.addMethod("closest_block", async (params) => {
     const ts = params[0];
+    if (isNan(ts)) {
+        return `time ${ts} is not an integer`;
+    }
     return await binarySearchClosest(tsFile, 8, ts, 0, 'readBigUInt64BE');
 });
 
@@ -377,6 +389,13 @@ app.get("/blockframe/*", async (req, res) => {
     url = url.substring(0, offset);
     const asset = url.replace('/blockframe/', '');
 
+    if (isNan(from)) {
+        return res.end(`from block ${from} is not an integer`);
+    }
+    if (isNan(to)) {
+        return res.end(`to block ${to} is not an integer`);
+    }
+
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
         return res.end(`asset ${asset} does not exist`);
@@ -386,6 +405,14 @@ app.get("/blockframe/*", async (req, res) => {
 
 server.addMethod("blockframe", async (params) => {
     const [asset, from, to] = params;
+
+    if (isNan(from)) {
+        throw `from block ${from} is not an integer`;
+    }
+    if (isNan(to)) {
+        throw `to block ${to} is not an integer`;
+    }
+
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
         throw `asset ${asset} does not exist`;
@@ -404,6 +431,13 @@ app.get("/timeframe/*", async (req, res) => {
     url = url.substring(0, offset);
     const asset = url.replace('/timeframe/', '');
 
+    if (isNan(from)) {
+        return res.end(`from time ${from} is not an integer`);
+    }
+    if (isNan(to)) {
+        return res.end(`to time ${to} is not an integer`);
+    }
+
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
         return res.end(`asset ${asset} does not exist`);
@@ -416,6 +450,12 @@ app.get("/timeframe/*", async (req, res) => {
 
 server.addMethod("timeframe", async (params) => {
     const [asset, from, to] = params;
+    if (isNan(from)) {
+        throw `from time ${from} is not an integer`;
+    }
+    if (isNan(to)) {
+        throw `to time ${to} is not an integer`;
+    }
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
         throw `asset ${asset} does not exist`;
@@ -436,6 +476,13 @@ app.get("/timedelta/*", async (req, res) => {
     url = url.substring(0, offset);
     const asset = url.replace('/timedelta/', '');
     
+    if (isNan(from)) {
+        return res.end(`from time ${from} is not an integer`);
+    }
+    if (isNan(to)) {
+        return res.end(`to time ${to} is not an integer`);
+    }
+
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
         return res.end(`asset ${asset} does not exist`);
@@ -456,6 +503,14 @@ app.get("/timedelta/*", async (req, res) => {
 
 server.addMethod("timedelta", async (params) => {
     const [asset, from, to] = params;
+
+    if (isNan(from)) {
+        throw `from time ${from} is not an integer`;
+    }
+    if (isNan(to)) {
+        throw `to time ${to} is not an integer`;
+    }
+
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
         throw `asset ${asset} does not exist`;
@@ -484,6 +539,13 @@ app.get("/blockdelta/*", async (req, res) => {
     url = url.substring(0, offset);
     const asset = url.replace('/blockdelta/', '');
 
+    if (isNan(from)) {
+        return res.end(`from height ${from} is not an integer`);
+    }
+    if (isNan(to)) {
+        return res.end(`to height ${to} is not an integer`);
+    }
+
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
         return res.end(`asset ${asset} does not exist`);
@@ -502,6 +564,14 @@ app.get("/blockdelta/*", async (req, res) => {
 
 server.addMethod("blockdelta", async (params) => {
     const [asset, from, to] = params;
+
+    if (isNan(from)) {
+        throw `from height ${from} is not an integer`;
+    }
+    if (isNan(to)) {
+        throw `to height ${to} is not an integer`;
+    }
+
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
         throw `asset ${asset} does not exist`;
@@ -522,6 +592,11 @@ app.get("/stats/*", async (req, res) => {
     let url = req.url;
     let offset = url.lastIndexOf('/');
     const height = parseInt(url.substring(offset + 1));
+
+    if (isNaN(height)) {
+        return res.end(`height ${url.substring(offset + 1)} is not an integer`);
+    }
+
     url = url.substring(0, offset);
     const asset = url.replace('/stats/', '');
 
@@ -554,6 +629,11 @@ app.get("/stats/*", async (req, res) => {
 
 server.addMethod("stats", async (params) => {
     const [asset, height] = params;
+
+    if (isNan(height)) {
+        throw `height ${height} is not a number`;
+    }
+
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
         throw `asset ${asset} does not exist`;
