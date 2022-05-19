@@ -345,7 +345,8 @@ async function getStatsForOffset(dataDir, offset) {
     const voutFile = path.join(dataDir, 'vouts'); // 8
     const reissueFile = path.join(dataDir, 'reissues'); // 8
     const transferFile = path.join(dataDir, 'transfers'); // 8
-    const childrenFile = path.join(dataDir, 'children');
+    const childrenFile = path.join(dataDir, 'children'); // 8
+    const childVolumeFile = path.join(dataDir, 'childVolume'); // 16
 
     const dbHeightBytes = await readNBytesFromOffset(heightFile, offset*4, 4);
     const dbHeight = dbHeightBytes.readUInt32BE();
@@ -363,8 +364,10 @@ async function getStatsForOffset(dataDir, offset) {
     const transfers = transferBytes.readBigUInt64BE();
     const childrenBytes = await readNBytesFromOffset(childrenFile, offset*8, 8);
     const children = childrenBytes.readBigUInt64BE();
+    const childVolumeBytes = await readNBytesFromOffset(childVolumeFile, offset*16, 16);
+    const childVolume = BigIntBuffer.toBigIntBE(childVolumeBytes)
 
-    return [dbHeight, ts, volume, fee, vouts, reissues, transfers, children];
+    return [dbHeight, ts, volume, fee, vouts, reissues, transfers, children, childVolume];
 }
 
 async function getStatsForBlockFrame(assetDir, from, to) {
@@ -376,9 +379,9 @@ async function getStatsForBlockFrame(assetDir, from, to) {
     //res.send('{\n');
     let ret = '{\n';
     for (let i = closest_from; i <= closest_to; i++) {
-        const [dbHeight, ts, volume, fee, vouts, reissues, transfers, children] = await getStatsForOffset(dataDir, i);
+        const [dbHeight, ts, volume, fee, vouts, reissues, transfers, children, child_volume] = await getStatsForOffset(dataDir, i);
         //res.end(`\t"${dbHeight}": {"total_volume":"${volume}", "total_relative_fees":${fee}, "total_vouts":${vouts}, "total_reissue_vouts":${reissues}, "total_transfer_vouts":${transfers}}${i == closest_to ? '' : ','}\n`);
-        ret += `\t"${dbHeight}": {"timestamp":"${ts}", "cum_volume":"${volume}", "cum_fees":${fee}, "cum_vouts":${vouts}, "cum_reissues":${reissues}, "cum_transfers":${transfers}, "children":${children}}${i == closest_to ? '' : ','}\n`;
+        ret += `\t"${dbHeight}": {"timestamp":"${ts}", "cum_volume":"${volume}", "cum_fees":${fee}, "cum_vouts":${vouts}, "cum_reissues":${reissues}, "cum_transfers":${transfers}, "children":${children}, "cum_child_volume":${child_volume}}${i == closest_to ? '' : ','}\n`;
     }
     return ret + '}\n';
 }
@@ -497,10 +500,10 @@ app.get("/timedelta/*", async (req, res) => {
     const closest_from = await binarySearchClosest(heightFile, 4, from_block, 2, 'readUInt32BE');
     const closest_to = await binarySearchClosest(heightFile, 4, to_block, 1, 'readUInt32BE');
 
-    const [dbHeight1, ts1, volume1, fee1, vouts1, reissues1, transfers1, children1] = await getStatsForOffset(dataDir, closest_from);
-    const [dbHeight2, ts2, volume2, fee2, vouts2, reissues2, transfers2, children2] = await getStatsForOffset(dataDir, closest_to);
+    const [dbHeight1, ts1, volume1, fee1, vouts1, reissues1, transfers1, children1, child_volume1] = await getStatsForOffset(dataDir, closest_from);
+    const [dbHeight2, ts2, volume2, fee2, vouts2, reissues2, transfers2, children2, child_volume2] = await getStatsForOffset(dataDir, closest_to);
 
-    res.end(`{\n\t"starting_block":${dbHeight1},\n\t"starting_timestamp":${ts1},\n\t"ending_block":${dbHeight2},\n\t"ending_timestamp":${ts2},\n\t"d_volume":"${volume2-volume1}",\n\t"d_fees":${fee2-fee1},\n\t"d_vouts":${vouts2-vouts1},\n\t"d_reissues":${reissues2-reissues1},\n\t"d_transfers":${transfers2-transfers1},\n\t"d_children":${children2-children1}\n}\n`);
+    res.end(`{\n\t"starting_block":${dbHeight1},\n\t"starting_timestamp":${ts1},\n\t"ending_block":${dbHeight2},\n\t"ending_timestamp":${ts2},\n\t"d_volume":"${volume2-volume1}",\n\t"d_fees":${fee2-fee1},\n\t"d_vouts":${vouts2-vouts1},\n\t"d_reissues":${reissues2-reissues1},\n\t"d_transfers":${transfers2-transfers1},\n\t"d_children":${children2-children1},\n\t"d_child_volume":${child_volume2-child_volume1}\n}\n`);
 
 });
 
@@ -525,10 +528,10 @@ server.addMethod("timedelta", async (params) => {
     const closest_from = await binarySearchClosest(heightFile, 4, from_block, 2, 'readUInt32BE');
     const closest_to = await binarySearchClosest(heightFile, 4, to_block, 1, 'readUInt32BE');
 
-    const [dbHeight1, ts1, volume1, fee1, vouts1, reissues1, transfers1, children1] = await getStatsForOffset(dataDir, closest_from);
-    const [dbHeight2, ts2, volume2, fee2, vouts2, reissues2, transfers2, children2] = await getStatsForOffset(dataDir, closest_to);
+    const [dbHeight1, ts1, volume1, fee1, vouts1, reissues1, transfers1, children1, child_volume1] = await getStatsForOffset(dataDir, closest_from);
+    const [dbHeight2, ts2, volume2, fee2, vouts2, reissues2, transfers2, children2, child_volume2] = await getStatsForOffset(dataDir, closest_to);
 
-    const parsed = JSON.parse(`{\n\t"starting_block":${dbHeight1},\n\t"starting_timestamp":${ts1},\n\t"ending_block":${dbHeight2},\n\t"ending_timestamp":${ts2},\n\t"d_volume":"${volume2-volume1}",\n\t"d_fees":${fee2-fee1},\n\t"d_vouts":${vouts2-vouts1},\n\t"d_reissues":${reissues2-reissues1},\n\t"d_transfers":${transfers2-transfers1},\n\t"d_children":${children2-children1}\n}\n`);
+    const parsed = JSON.parse(`{\n\t"starting_block":${dbHeight1},\n\t"starting_timestamp":${ts1},\n\t"ending_block":${dbHeight2},\n\t"ending_timestamp":${ts2},\n\t"d_volume":"${volume2-volume1}",\n\t"d_fees":${fee2-fee1},\n\t"d_vouts":${vouts2-vouts1},\n\t"d_reissues":${reissues2-reissues1},\n\t"d_transfers":${transfers2-transfers1},\n\t"d_children":${children2-children1},\n\t"d_child_volume":${child_volume2-child_volume1}\n}\n`);
     return parsed;
 });
 
@@ -558,10 +561,10 @@ app.get("/blockdelta/*", async (req, res) => {
     const closest_from = await binarySearchClosest(heightFile, 4, from, 2, 'readUInt32BE');
     const closest_to = await binarySearchClosest(heightFile, 4, to, 1, 'readUInt32BE');
 
-    const [dbHeight1, ts1, volume1, fee1, vouts1, reissues1, transfers1, children1] = await getStatsForOffset(dataDir, closest_from);
-    const [dbHeight2, ts2, volume2, fee2, vouts2, reissues2, transfers2, children2] = await getStatsForOffset(dataDir, closest_to);
+    const [dbHeight1, ts1, volume1, fee1, vouts1, reissues1, transfers1, children1, child_volume1] = await getStatsForOffset(dataDir, closest_from);
+    const [dbHeight2, ts2, volume2, fee2, vouts2, reissues2, transfers2, children2, child_volume2] = await getStatsForOffset(dataDir, closest_to);
 
-    res.end(`{\n\t"starting_block":${dbHeight1},\n\t"starting_timestamp":${ts1},\n\t"ending_block":${dbHeight2},\n\t"ending_timestamp":${ts2},\n\t"d_volume":"${volume2-volume1}",\n\t"d_fees":${fee2-fee1},\n\t"d_vouts":${vouts2-vouts1},\n\t"d_reissues":${reissues2-reissues1},\n\t"d_transfers":${transfers2-transfers1},\n\t"d_children":${children2-children1}\n}\n`);
+    res.end(`{\n\t"starting_block":${dbHeight1},\n\t"starting_timestamp":${ts1},\n\t"ending_block":${dbHeight2},\n\t"ending_timestamp":${ts2},\n\t"d_volume":"${volume2-volume1}",\n\t"d_fees":${fee2-fee1},\n\t"d_vouts":${vouts2-vouts1},\n\t"d_reissues":${reissues2-reissues1},\n\t"d_transfers":${transfers2-transfers1},\n\t"d_children":${children2-children1},\n\t"d_child_volume":${child_volume2-child_volume1}\n}\n`);
 
 });
 
@@ -584,10 +587,10 @@ server.addMethod("blockdelta", async (params) => {
     const closest_from = await binarySearchClosest(heightFile, 4, from, 2, 'readUInt32BE');
     const closest_to = await binarySearchClosest(heightFile, 4, to, 1, 'readUInt32BE');
 
-    const [dbHeight1, ts1, volume1, fee1, vouts1, reissues1, transfers1, children1] = await getStatsForOffset(dataDir, closest_from);
-    const [dbHeight2, ts2, volume2, fee2, vouts2, reissues2, transfers2, children2] = await getStatsForOffset(dataDir, closest_to);
+    const [dbHeight1, ts1, volume1, fee1, vouts1, reissues1, transfers1, children1, child_volume1] = await getStatsForOffset(dataDir, closest_from);
+    const [dbHeight2, ts2, volume2, fee2, vouts2, reissues2, transfers2, children2, child_volume2] = await getStatsForOffset(dataDir, closest_to);
 
-    const parsed = JSON.parse(`{\n\t"starting_block":${dbHeight1},\n\t"starting_timestamp":${ts1},\n\t"ending_block":${dbHeight2},\n\t"ending_timestamp":${ts2},\n\t"d_volume":"${volume2-volume1}",\n\t"d_fees":${fee2-fee1},\n\t"d_vouts":${vouts2-vouts1},\n\t"d_reissues":${reissues2-reissues1},\n\t"d_transfers":${transfers2-transfers1},\n\t"d_children":${children2-children1}\n}\n`);
+    const parsed = JSON.parse(`{\n\t"starting_block":${dbHeight1},\n\t"starting_timestamp":${ts1},\n\t"ending_block":${dbHeight2},\n\t"ending_timestamp":${ts2},\n\t"d_volume":"${volume2-volume1}",\n\t"d_fees":${fee2-fee1},\n\t"d_vouts":${vouts2-vouts1},\n\t"d_reissues":${reissues2-reissues1},\n\t"d_transfers":${transfers2-transfers1},\n\t"d_children":${children2-children1},\n\t"d_child_volume":${child_volume2-child_volume1}\n}\n`);
     return parsed;
 });
 
@@ -626,9 +629,9 @@ app.get("/stats/*", async (req, res) => {
         transfers = 0;
         children = 0;
     } else {
-        [dbHeight, ts, volume, fee, vouts, reissues, transfers, children] = await getStatsForOffset(dataDir, closest);
+        [dbHeight, ts, volume, fee, vouts, reissues, transfers, children, child_volume] = await getStatsForOffset(dataDir, closest);
     }
-    res.end(`{\n\t"last_height":${dbHeight},\n\t"last_timestamp":${ts},\n\t"cum_volume":"${volume}",\n\t"cum_fees":${fee},\n\t"cum_vouts":${vouts},\n\t"cum_reissues":${reissues},\n\t"cum_transfers":${transfers},\n\t"cum_children":${children}\n}\n`);
+    res.end(`{\n\t"last_height":${dbHeight},\n\t"last_timestamp":${ts},\n\t"cum_volume":"${volume}",\n\t"cum_fees":${fee},\n\t"cum_vouts":${vouts},\n\t"cum_reissues":${reissues},\n\t"cum_transfers":${transfers},\n\t"cum_children":${children},\n\t"cum_child_volume":${child_volume}\n}\n`);
 });
 
 server.addMethod("stats", async (params) => {
@@ -661,9 +664,9 @@ server.addMethod("stats", async (params) => {
         transfers = 0;
         children = 0;
     } else {
-        [dbHeight, ts, volume, fee, vouts, reissues, transfers, children] = await getStatsForOffset(dataDir, closest);
+        [dbHeight, ts, volume, fee, vouts, reissues, transfers, children, child_volume] = await getStatsForOffset(dataDir, closest);
     }
-    const parsed = JSON.parse(`{\n\t"last_height":${dbHeight},\n\t"last_timestamp":${ts},\n\t"cum_volume":"${volume}",\n\t"cum_fees":${fee},\n\t"cum_vouts":${vouts},\n\t"cum_reissues":${reissues},\n\t"cum_transfers":${transfers},\n\t"cum_children":${children}\n}\n`);
+    const parsed = JSON.parse(`{\n\t"last_height":${dbHeight},\n\t"last_timestamp":${ts},\n\t"cum_volume":"${volume}",\n\t"cum_fees":${fee},\n\t"cum_vouts":${vouts},\n\t"cum_reissues":${reissues},\n\t"cum_transfers":${transfers},\n\t"cum_children":${children},\n\t"cum_child_volume":${child_volume}\n}\n`);
     return parsed;
 });
 
@@ -773,6 +776,7 @@ async function ravendQuery() {
                             const parent_asset = asset_name.substring(0, further)
                             if (parent_asset in asset_map) {
                                 asset_map[parent_asset].children += 1;
+                                asset_map[parent_asset].child_volume += asset_amount;
                             } else {
                                 asset_map[asset_name] = {
                                     byte_amt:0,
@@ -780,7 +784,8 @@ async function ravendQuery() {
                                     vouts:0,
                                     reissuances:0,
                                     transfers:0,
-                                    children:1
+                                    children:1,
+                                    child_volume:asset_amount
                                 };
                             }
                         }
@@ -798,7 +803,8 @@ async function ravendQuery() {
                                 vouts:1,
                                 reissuances: issue_names.has(asset_type) ? 1 : 0,
                                 transfers: asset_type == 'transfer_asset' ? 1 : 0,
-                                children:0
+                                children:0,
+                                child_volume:0
                             };
                         }
                     }
@@ -862,6 +868,17 @@ async function ravendQuery() {
                         }
                         const volumeBytes = BigIntBuffer.toBufferBE(old_volume + BigInt(asset_map[asset].volume), 16)
                         fs.appendFileSync(volumeFile, volumeBytes);
+
+                        // Write child volume
+                        const childVolumeFile = path.join(dataDir, 'childVolume');
+                        let old_child_volume = BigInt(0);
+                        if (fs.existsSync(childVolumeFile)) {
+                            await cutLastNBytesFromOffset(volumeFile, elements*16);
+                            const old_child_volume_bytes = await readLastNBytes(childVolumeFile, 16).catch((e) => Buffer.alloc(16));
+                            old_volume = BigIntBuffer.toBigIntBE(old_child_volume_bytes);
+                        }
+                        const childVolumeBytes = BigIntBuffer.toBufferBE(old_child_volume + BigInt(asset_map[asset].child_volume), 16)
+                        fs.appendFileSync(childVolumeFile, childVolumeBytes)
 
                         // Write vouts
                         const voutFile = path.join(dataDir, 'vouts');
