@@ -779,7 +779,7 @@ async function ravendQuery() {
                                     asset_map[parent_asset].children += 1;
                                     asset_map[parent_asset].child_volume += asset_amount;
                                 } else {
-                                    asset_map[asset_name] = {
+                                    asset_map[parent_asset] = {
                                         byte_amt:0,
                                         volume:0, 
                                         vouts:0,
