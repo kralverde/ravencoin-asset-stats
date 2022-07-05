@@ -236,6 +236,7 @@ const server = new JSONRPCServer();
 
 const app = express();
 app.use(bodyParser.json());
+var server_app = null;
 
 server.addMethod("currentHeight", (params) => {
     return currentHeight;
@@ -683,13 +684,16 @@ app.post("/", (req, res) => {
 
 async function ravendQuery() {
     var id_cnt = 0;
+    var do_loop = true;
+    var timeout_id = null;
     async function query(method, params) {
         const dataString = {jsonrpc:"2.0",id:id_cnt++,method:method,params:params};
         const res = await urllib.request(ravendURL, 
             {
                 method: 'POST', 
                 data: JSON.stringify(dataString),
-                headers: {'Content-Type': 'application/json'}
+                headers: {'Content-Type': 'application/json'},
+                timeout: 30000
             });
         if (res.status != 200) {
             throw "POST status error from " + JSON.stringify(dataString) + ": " + res.status + " " + res.statusMessage;
@@ -709,10 +713,16 @@ async function ravendQuery() {
     }
 
     function onExit() {
+        console.log('Shutting Down...');
+
+        do_loop = false;
+        clearTimeout(timeout_id);
+
+        server_app.close();
+
         if(fs.existsSync(lockFile)) {
             fs.unlinkSync(lockFile)
         }
-        process.exit();
     }
     
     if(!fs.existsSync(mainDir)) {
@@ -745,7 +755,7 @@ async function ravendQuery() {
     }
     const issue_names = new Set(['new_asset', 'reissue_asset']);
 
-    while(true) {
+    while(do_loop) {
         try {
             const node_height = BigInt(await query('getblockcount', []));
             if(currentHeight < node_height - BigInt(200)) { //Buffer for reorgs
@@ -773,10 +783,10 @@ async function ravendQuery() {
                             const last_unique = asset_name.lastIndexOf('#');
                             const last_sub = asset_name.lastIndexOf('/');
                             const further = Math.max(last_unique, last_sub);
-                            if (further > 0) {
+                            if (further > 0 && asset_name.charAt(asset_name.length - 1) != '!') {
                                 const parent_asset = asset_name.substring(0, further);
                                 if (parent_asset in asset_map) {
-                                    asset_map[parent_asset].children += 1;
+                                    asset_map[parent_asset].children += asset_type == 'new_asset' ? 1 : 0;
                                     asset_map[parent_asset].child_volume += asset_amount;
                                 } else {
                                     asset_map[parent_asset] = {
@@ -785,7 +795,7 @@ async function ravendQuery() {
                                         vouts:0,
                                         reissuances:0,
                                         transfers:0,
-                                        children:1,
+                                        children:asset_type == 'new_asset' ? 1 : 0,
                                         child_volume:asset_amount
                                     };
                                 }
@@ -841,8 +851,8 @@ async function ravendQuery() {
                             if (fs.existsSync(feeFile)) {
                                 await cutLastNBytesFromOffset(feeFile, elements*8);
                                 const old_fee_bytes = await readLastNBytes(feeFile, 8).catch((e)=> {
-                                    console.log('failed to query feeFile');
-                                    console.log(e);
+                                    //console.log('failed to query feeFile');
+                                    //console.log(e);
                                     return Buffer.alloc(8);
                                 });
                                 old_fees = old_fee_bytes.readBigUInt64BE();
@@ -857,8 +867,8 @@ async function ravendQuery() {
                             if (fs.existsSync(childrenFile)) {
                                 await cutLastNBytesFromOffset(childrenFile, elements*8);
                                 const old_children_bytes = await readLastNBytes(childrenFile, 8).catch((e) => {
-                                    console.log('failed to query childrenFile');
-                                    console.log(e);
+                                    //console.log('failed to query childrenFile');
+                                    //console.log(e);
                                     return Buffer.alloc(8);
                                 });
                                 old_children = old_children_bytes.readBigUInt64BE();    
@@ -873,8 +883,8 @@ async function ravendQuery() {
                             if (fs.existsSync(volumeFile)) {
                                 await cutLastNBytesFromOffset(volumeFile, elements*16);
                                 const old_volume_bytes = await readLastNBytes(volumeFile, 16).catch((e) => {
-                                    console.log('failed to query volumeFile');
-                                    console.log(e);
+                                    //console.log('failed to query volumeFile');
+                                    //console.log(e);
                                     return Buffer.alloc(16);
                                 });
                                 old_volume = BigIntBuffer.toBigIntBE(old_volume_bytes);
@@ -888,8 +898,8 @@ async function ravendQuery() {
                             if (fs.existsSync(childVolumeFile)) {
                                 await cutLastNBytesFromOffset(childVolumeFile, elements*16);
                                 const old_child_volume_bytes = await readLastNBytes(childVolumeFile, 16).catch((e) => {
-                                    console.log('failed to query volumeFile');
-                                    console.log(e);
+                                    //console.log('failed to query volumeFile');
+                                    //console.log(e);
                                     return Buffer.alloc(16);
                                 });
                                 old_child_volume = BigIntBuffer.toBigIntBE(old_child_volume_bytes);
@@ -940,14 +950,16 @@ async function ravendQuery() {
                     console.log('Parsing height ' + currentHeight);
                 }
             } else {
-                await new Promise(resolve => setTimeout(resolve, 60000)); //Wait a minute
+                timeout_id = await new Promise(resolve => setTimeout(resolve, 60000)); //Wait a minute
+                console.log(timeout_id);
             }
         } catch (err) {
             console.log(err);
             throw err;
         }
     }
-    
+
+    console.log('Synchronizer complete');
 }
 
 
@@ -956,5 +968,7 @@ Promise.all([
         console.log(`ravendQuery error: ${e}`);
         exit(1);
     }),
-    app.listen(port)
+    (async () => {
+        server_app = app.listen(port);
+    })()
 ]);
