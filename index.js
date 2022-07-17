@@ -489,6 +489,9 @@ app.get("/timedelta/*", async (req, res) => {
     if (isNaN(to)) {
         return res.end(`to time ${to} is not an integer`);
     }
+    if (from >= to) {
+        return res.end(`from time ${from} is greater than or equal to time ${to}`);
+    }
 
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
@@ -504,7 +507,13 @@ app.get("/timedelta/*", async (req, res) => {
     const [dbHeight1, ts1, volume1, fee1, vouts1, reissues1, transfers1, children1, child_volume1] = await getStatsForOffset(dataDir, closest_from);
     const [dbHeight2, ts2, volume2, fee2, vouts2, reissues2, transfers2, children2, child_volume2] = await getStatsForOffset(dataDir, closest_to);
 
-    res.end(`{\n\t"starting_block":${dbHeight1},\n\t"starting_timestamp":${ts1},\n\t"ending_block":${dbHeight2},\n\t"ending_timestamp":${ts2},\n\t"d_volume":"${volume2-volume1}",\n\t"d_fees":${fee2-fee1},\n\t"d_vouts":${vouts2-vouts1},\n\t"d_reissues":${reissues2-reissues1},\n\t"d_transfers":${transfers2-transfers1},\n\t"d_children":${children2-children1},\n\t"d_child_volume":${child_volume2-child_volume1}\n}\n`);
+
+    // if height 1 > height 2, no data during this block frame
+    if (dbHeight1 > dbHeight2) {
+        return res.end(`{\n\t"starting_block":-1,\n\t"starting_timestamp":${from},\n\t"ending_block":-1,\n\t"ending_timestamp":${to},\n\t"d_volume":0,\n\t"d_fees":0,\n\t"d_vouts":0,\n\t"d_reissues":0,\n\t"d_transfers":0,\n\t"d_children":0,\n\t"d_child_volume":0\n}\n`);
+    }
+
+    res.end(`{\n\t"starting_block":${dbHeight1},\n\t"starting_timestamp":${ts1},\n\t"ending_block":${dbHeight2},\n\t"ending_timestamp":${ts2},\n\t"d_volume":${volume2-volume1},\n\t"d_fees":${fee2-fee1},\n\t"d_vouts":${vouts2-vouts1},\n\t"d_reissues":${reissues2-reissues1},\n\t"d_transfers":${transfers2-transfers1},\n\t"d_children":${children2-children1},\n\t"d_child_volume":${child_volume2-child_volume1}\n}\n`);
 
 });
 
@@ -516,6 +525,9 @@ server.addMethod("timedelta", async (params) => {
     }
     if (isNaN(to)) {
         throw `to time ${to} is not an integer`;
+    }
+    if (from >= to) {
+        throw `from timestamp ${from} is greater than or equal to timestamp ${to}`;
     }
 
     const assetDir = path.join(mainDir, asset);
@@ -532,7 +544,12 @@ server.addMethod("timedelta", async (params) => {
     const [dbHeight1, ts1, volume1, fee1, vouts1, reissues1, transfers1, children1, child_volume1] = await getStatsForOffset(dataDir, closest_from);
     const [dbHeight2, ts2, volume2, fee2, vouts2, reissues2, transfers2, children2, child_volume2] = await getStatsForOffset(dataDir, closest_to);
 
-    const parsed = JSON.parse(`{\n\t"starting_block":${dbHeight1},\n\t"starting_timestamp":${ts1},\n\t"ending_block":${dbHeight2},\n\t"ending_timestamp":${ts2},\n\t"d_volume":"${volume2-volume1}",\n\t"d_fees":${fee2-fee1},\n\t"d_vouts":${vouts2-vouts1},\n\t"d_reissues":${reissues2-reissues1},\n\t"d_transfers":${transfers2-transfers1},\n\t"d_children":${children2-children1},\n\t"d_child_volume":${child_volume2-child_volume1}\n}\n`);
+    if (dbHeight1 > dbHeight2) {
+        const parsed = JSON.parse(`{\n\t"starting_block":-1,\n\t"starting_timestamp":${from},\n\t"ending_block":-1,\n\t"ending_timestamp":${to},\n\t"d_volume":0,\n\t"d_fees":0,\n\t"d_vouts":0,\n\t"d_reissues":0,\n\t"d_transfers":0,\n\t"d_children":0,\n\t"d_child_volume":0\n}\n`);
+        return parsed;
+    }
+
+    const parsed = JSON.parse(`{\n\t"starting_block":${dbHeight1},\n\t"starting_timestamp":${ts1},\n\t"ending_block":${dbHeight2},\n\t"ending_timestamp":${ts2},\n\t"d_volume":${volume2-volume1},\n\t"d_fees":${fee2-fee1},\n\t"d_vouts":${vouts2-vouts1},\n\t"d_reissues":${reissues2-reissues1},\n\t"d_transfers":${transfers2-transfers1},\n\t"d_children":${children2-children1},\n\t"d_child_volume":${child_volume2-child_volume1}\n}\n`);
     return parsed;
 });
 
@@ -552,6 +569,9 @@ app.get("/blockdelta/*", async (req, res) => {
     if (isNaN(to)) {
         return res.end(`to height ${to} is not an integer`);
     }
+    if (from >= to) {
+        return res.end(`from height ${from} is greater than or equal to height ${to}`);
+    }
 
     const assetDir = path.join(mainDir, asset);
     if (!fs.existsSync(assetDir)) {
@@ -565,7 +585,7 @@ app.get("/blockdelta/*", async (req, res) => {
     const [dbHeight1, ts1, volume1, fee1, vouts1, reissues1, transfers1, children1, child_volume1] = await getStatsForOffset(dataDir, closest_from);
     const [dbHeight2, ts2, volume2, fee2, vouts2, reissues2, transfers2, children2, child_volume2] = await getStatsForOffset(dataDir, closest_to);
 
-    res.end(`{\n\t"starting_block":${dbHeight1},\n\t"starting_timestamp":${ts1},\n\t"ending_block":${dbHeight2},\n\t"ending_timestamp":${ts2},\n\t"d_volume":"${volume2-volume1}",\n\t"d_fees":${fee2-fee1},\n\t"d_vouts":${vouts2-vouts1},\n\t"d_reissues":${reissues2-reissues1},\n\t"d_transfers":${transfers2-transfers1},\n\t"d_children":${children2-children1},\n\t"d_child_volume":${child_volume2-child_volume1}\n}\n`);
+    res.end(`{\n\t"starting_block":${dbHeight1},\n\t"starting_timestamp":${ts1},\n\t"ending_block":${dbHeight2},\n\t"ending_timestamp":${ts2},\n\t"d_volume":${volume2-volume1},\n\t"d_fees":${fee2-fee1},\n\t"d_vouts":${vouts2-vouts1},\n\t"d_reissues":${reissues2-reissues1},\n\t"d_transfers":${transfers2-transfers1},\n\t"d_children":${children2-children1},\n\t"d_child_volume":${child_volume2-child_volume1}\n}\n`);
 
 });
 
@@ -577,6 +597,9 @@ server.addMethod("blockdelta", async (params) => {
     }
     if (isNaN(to)) {
         throw `to height ${to} is not an integer`;
+    }
+    if (from >= to) {
+        throw `from height ${from} is greater than or equal to height ${to}`;
     }
 
     const assetDir = path.join(mainDir, asset);
@@ -591,7 +614,7 @@ server.addMethod("blockdelta", async (params) => {
     const [dbHeight1, ts1, volume1, fee1, vouts1, reissues1, transfers1, children1, child_volume1] = await getStatsForOffset(dataDir, closest_from);
     const [dbHeight2, ts2, volume2, fee2, vouts2, reissues2, transfers2, children2, child_volume2] = await getStatsForOffset(dataDir, closest_to);
 
-    const parsed = JSON.parse(`{\n\t"starting_block":${dbHeight1},\n\t"starting_timestamp":${ts1},\n\t"ending_block":${dbHeight2},\n\t"ending_timestamp":${ts2},\n\t"d_volume":"${volume2-volume1}",\n\t"d_fees":${fee2-fee1},\n\t"d_vouts":${vouts2-vouts1},\n\t"d_reissues":${reissues2-reissues1},\n\t"d_transfers":${transfers2-transfers1},\n\t"d_children":${children2-children1},\n\t"d_child_volume":${child_volume2-child_volume1}\n}\n`);
+    const parsed = JSON.parse(`{\n\t"starting_block":${dbHeight1},\n\t"starting_timestamp":${ts1},\n\t"ending_block":${dbHeight2},\n\t"ending_timestamp":${ts2},\n\t"d_volume":${volume2-volume1},\n\t"d_fees":${fee2-fee1},\n\t"d_vouts":${vouts2-vouts1},\n\t"d_reissues":${reissues2-reissues1},\n\t"d_transfers":${transfers2-transfers1},\n\t"d_children":${children2-children1},\n\t"d_child_volume":${child_volume2-child_volume1}\n}\n`);
     return parsed;
 });
 
